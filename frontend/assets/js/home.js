@@ -29,12 +29,12 @@ const HomeView = {
                 const pStats = profileRes.stats;
                 const cur = pStats.current_lesson || { id: 1, title: 'Giới thiệu về ngôn ngữ lập trình C++' };
                 userProgressHtml = `
-                    <div class="card p-4 mb-5 anim-slide-up" style="border-left: 4px solid var(--primary); background: linear-gradient(135deg, rgba(99,102,241,0.12) 0%, rgba(18,24,38,0.85) 100%);">
+                    <div class="user-progress-banner anim-slide-up">
                         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
                             <div>
                                 <span class="badge badge-primary mb-2"><i class="fas fa-user-graduate"></i> Tiến độ học tập của bạn</span>
-                                <h3 style="font-size: 1.25rem; font-weight: 700;">Đang học: Bài ${cur.id} - ${cur.title}</h3>
-                                <p class="text-secondary" style="font-size: 0.9rem; margin-top: 0.35rem;">
+                                <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 0.35rem;">Đang học: Bài ${cur.id} - ${cur.title}</h3>
+                                <p class="text-secondary" style="font-size: 0.9rem;">
                                     Đã hoàn thành <strong class="text-primary">${pStats.completed_lessons}/${pStats.total_lessons}</strong> bài học (${pStats.progress_percentage}%)
                                 </p>
                             </div>
@@ -58,9 +58,9 @@ const HomeView = {
         }
 
         container.innerHTML = `
-            <div class="container py-5">
+            <div class="container py-4">
                 <!-- HERO SECTION -->
-                <div class="row align-items-center mb-5" style="display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 3.5rem; align-items: center;">
+                <div class="hero-grid">
                     <div class="anim-slide-up">
                         <div style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.95rem; border-radius: var(--radius-full); background: var(--primary-light); border: 1px solid var(--border-accent); margin-bottom: 1.5rem;">
                             <span style="width: 8px; height: 8px; border-radius: 50%; background: #22c55e; display: inline-block; box-shadow: 0 0 10px #22c55e;"></span>
@@ -84,7 +84,7 @@ const HomeView = {
                     </div>
 
                     <!-- HERO INTERACTIVE CODE PREVIEW -->
-                    <div class="card anim-fade-in" style="padding: 0; overflow: hidden; box-shadow: var(--shadow-glow); border-color: var(--border-accent);">
+                    <div class="card hero-terminal-card anim-fade-in" style="padding: 0;">
                         <div class="code-header">
                             <div class="code-header-left">
                                 <div class="code-dots">
@@ -92,11 +92,11 @@ const HomeView = {
                                     <span class="code-dot dot-yellow"></span>
                                     <span class="code-dot dot-green"></span>
                                 </div>
-                                <span style="font-weight: 600; color: var(--text-primary); margin-left: 0.5rem; font-family: var(--font-mono);"><i class="fas fa-terminal"></i> main.cpp</span>
+                                <span style="font-weight: 600; margin-left: 0.5rem; font-family: var(--font-mono);"><i class="fas fa-terminal"></i> main.cpp</span>
                             </div>
                             <span class="badge badge-primary">C++20 ISO</span>
                         </div>
-                        <div class="code-content" style="padding: 1.25rem; font-size: 0.85rem; background: #070b14;">
+                        <div class="code-content" style="padding: 1.25rem; font-size: 0.85rem;">
 <pre style="margin: 0; color: #cbd5e1;"><code><span style="color: #f43f5e; font-weight: 600;">#include</span> <span style="color: #34d399;">&lt;iostream&gt;</span>
 <span style="color: #f43f5e; font-weight: 600;">#include</span> <span style="color: #34d399;">&lt;string&gt;</span>
 <span style="color: #f43f5e; font-weight: 600;">using namespace</span> std;
@@ -108,16 +108,16 @@ const HomeView = {
     <span style="color: #a78bfa; font-weight: 600;">return</span> <span style="color: #fb923c;">0</span>;
 }</code></pre>
                         </div>
-                        <div style="background: rgba(0,0,0,0.35); padding: 0.85rem 1.25rem; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
-                            <span style="font-size: 0.8rem; color: var(--text-muted);"><i class="fas fa-check-circle text-success"></i> Biên dịch C++20 sẵn sàng</span>
+                        <div class="terminal-footer" style="padding: 0.85rem 1.25rem; display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 0.8rem;"><i class="fas fa-check-circle text-success"></i> Biên dịch C++20 sẵn sàng</span>
                             <button class="btn btn-sm btn-success" id="hero-run-btn" onclick="HomeView.simulateRunCode(this)">
                                 <i class="fas fa-play"></i> Chạy thử nghiệm ngay
                             </button>
                         </div>
-                        <div id="hero-run-output" style="display: none; padding: 0.85rem 1.25rem; background: #040810; font-family: var(--font-mono); font-size: 0.8rem; color: #4ade80; border-top: 1px dashed var(--border-color);">
+                        <div id="hero-run-output" style="display: none; padding: 0.85rem 1.25rem; background: #040810; font-family: var(--font-mono); font-size: 0.8rem; color: #4ade80; border-top: 1px dashed rgba(255,255,255,0.1);">
                             &gt; Xin chao Sinh vien CNTT &amp; Su pham Tin!<br>
                             &gt; Bat dau hanh trinh tro thanh Lap trinh vien C++ dinh cao!<br>
-                            <span style="color: #94a3b8;">&gt; [Process exited with code 0 in 0.002s]</span>
+                            <span style="color: #8b949e;">&gt; [Process exited with code 0 in 0.002s]</span>
                         </div>
                     </div>
                 </div>
