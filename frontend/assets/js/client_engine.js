@@ -448,12 +448,12 @@ const ClientAPI = {
             const wrongCount = stat.total - stat.correct;
 
             if (ratio >= 0.75) {
-                strongTopics[] = {
+                strongTopics.push({
                     tag,
                     name: friendlyName,
                     accuracy: Math.round(ratio * 100) + '%',
                     detail: `Nắm vững ${stat.correct}/${stat.total} câu về ${friendlyName}`
-                };
+                });
             } else {
                 weakTopics.push({
                     tag,
