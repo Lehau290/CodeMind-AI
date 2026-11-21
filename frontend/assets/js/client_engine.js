@@ -188,23 +188,24 @@ const ClientAPI = {
         const attempts = JSON.parse(localStorage.getItem('cpp_attempts') || '[]');
 
         const lessons = rawLessons.map(l => {
-            const key = `${userId}_${l.id}`;
+            const numId = parseInt(l.id);
+            const key = `${userId}_${numId}`;
             const isCompleted = progressMap[key] ? Boolean(progressMap[key].is_completed) : false;
 
             // Quiz attempts on this lesson
-            const userAttempts = attempts.filter(a => a.user_id === userId && a.lesson_id === l.id);
+            const userAttempts = attempts.filter(a => a.user_id === userId && parseInt(a.lesson_id) === numId);
             const passedAttempt = userAttempts.find(a => a.passed);
             const bestScore = userAttempts.length > 0 ? Math.max(...userAttempts.map(a => a.score)) : null;
 
             return {
-                id: l.id,
-                chapter: l.chapter,
+                id: numId,
+                chapter: parseInt(l.chapter),
                 chapter_title: l.chapter_title,
                 title: l.title,
                 slug: l.slug,
                 description: l.description,
-                duration_mins: l.duration_mins,
-                order_num: l.order_num,
+                duration_mins: parseInt(l.duration_mins),
+                order_num: parseInt(l.order_num),
                 is_completed: isCompleted,
                 quiz_info: {
                     best_score: bestScore,
@@ -220,7 +221,8 @@ const ClientAPI = {
         this.initStorage();
         const data = window.CPP_DATA || { lessons: [], badges: [] };
         const rawLessons = data.lessons || [];
-        const l = rawLessons.find(item => item.id === lessonId);
+        const numId = parseInt(lessonId);
+        const l = rawLessons.find(item => parseInt(item.id) === numId);
 
         if (!l) {
             return { success: false, message: 'Không tìm thấy bài học.' };
@@ -230,39 +232,45 @@ const ClientAPI = {
         const userId = user ? user.id : 1;
 
         const progressMap = JSON.parse(localStorage.getItem('cpp_progress') || '{}');
-        const key = `${userId}_${l.id}`;
+        const key = `${userId}_${numId}`;
         const isCompleted = progressMap[key] ? Boolean(progressMap[key].is_completed) : false;
 
         const attempts = JSON.parse(localStorage.getItem('cpp_attempts') || '[]');
-        const userAttempts = attempts.filter(a => a.user_id === userId && a.lesson_id === l.id);
+        const userAttempts = attempts.filter(a => a.user_id === userId && parseInt(a.lesson_id) === numId);
         const passedAttempt = userAttempts.find(a => a.passed);
         const bestScore = userAttempts.length > 0 ? Math.max(...userAttempts.map(a => a.score)) : null;
 
-        const prevLesson = rawLessons.find(item => item.order_num === l.order_num - 1) || null;
-        const nextLesson = rawLessons.find(item => item.order_num === l.order_num + 1) || null;
+        const currOrder = parseInt(l.order_num);
+        const prevLesson = rawLessons.find(item => parseInt(item.order_num) === currOrder - 1) || null;
+        const nextLesson = rawLessons.find(item => parseInt(item.order_num) === currOrder + 1) || null;
 
         return {
             success: true,
             lesson: {
                 ...l,
+                id: numId,
+                chapter: parseInt(l.chapter),
+                duration_mins: parseInt(l.duration_mins),
+                order_num: currOrder,
                 is_completed: isCompleted,
                 best_score: bestScore,
                 has_passed_quiz: Boolean(passedAttempt),
                 can_mark_complete: Boolean(passedAttempt),
-                prev_lesson: prevLesson ? { id: prevLesson.id, title: prevLesson.title, slug: prevLesson.slug } : null,
-                next_lesson: nextLesson ? { id: nextLesson.id, title: nextLesson.title, slug: nextLesson.slug } : null
+                prev_lesson: prevLesson ? { id: parseInt(prevLesson.id), title: prevLesson.title, slug: prevLesson.slug } : null,
+                next_lesson: nextLesson ? { id: parseInt(nextLesson.id), title: nextLesson.title, slug: nextLesson.slug } : null
             }
         };
     },
 
     async markLessonComplete(lessonId) {
         this.initStorage();
+        const numId = parseInt(lessonId);
         const user = this.getCurrentUser();
         const userId = user ? user.id : 1;
 
         // REQUIREMENT: Must have passed quiz with score >= 5.0!
         const attempts = JSON.parse(localStorage.getItem('cpp_attempts') || '[]');
-        const passedAttempt = attempts.find(a => a.user_id === userId && a.lesson_id === lessonId && a.passed);
+        const passedAttempt = attempts.find(a => a.user_id === userId && parseInt(a.lesson_id) === numId && a.passed);
 
         if (!passedAttempt) {
             return {
@@ -273,7 +281,7 @@ const ClientAPI = {
         }
 
         const progressMap = JSON.parse(localStorage.getItem('cpp_progress') || '{}');
-        const key = `${userId}_${lessonId}`;
+        const key = `${userId}_${numId}`;
         progressMap[key] = {
             is_completed: true,
             completed_at: new Date().toISOString()
@@ -286,7 +294,7 @@ const ClientAPI = {
             this.awardBadge(userId, 'cpp_graduate');
         }
 
-        const nextId = (lessonId < 15) ? lessonId + 1 : null;
+        const nextId = (numId < 15) ? numId + 1 : null;
         return {
             success: true,
             message: 'Chúc mừng! Bạn đã hoàn thành bài học này thành công.',
@@ -297,11 +305,12 @@ const ClientAPI = {
 
     async unmarkLessonComplete(lessonId) {
         this.initStorage();
+        const numId = parseInt(lessonId);
         const user = this.getCurrentUser();
         const userId = user ? user.id : 1;
 
         const progressMap = JSON.parse(localStorage.getItem('cpp_progress') || '{}');
-        const key = `${userId}_${lessonId}`;
+        const key = `${userId}_${numId}`;
         if (progressMap[key]) {
             progressMap[key].is_completed = false;
             localStorage.setItem('cpp_progress', JSON.stringify(progressMap));
@@ -314,15 +323,16 @@ const ClientAPI = {
     async getQuiz(lessonId) {
         this.initStorage();
         const data = window.CPP_DATA || { lessons: [], badges: [] };
-        const l = (data.lessons || []).find(item => item.id === lessonId);
+        const numId = parseInt(lessonId);
+        const l = (data.lessons || []).find(item => parseInt(item.id) === numId);
         if (!l || !l.quiz) {
             return { success: false, message: 'Không tìm thấy bài kiểm tra.' };
         }
 
         // Questions without revealing correct_option and explanation
         const safeQuestions = (l.quiz.questions || []).map(q => ({
-            id: q.id,
-            quiz_id: q.quiz_id,
+            id: parseInt(q.id),
+            quiz_id: parseInt(q.quiz_id),
             question_text: q.question_text,
             code_snippet: q.code_snippet,
             option_a: q.option_a,
@@ -330,17 +340,17 @@ const ClientAPI = {
             option_c: q.option_c,
             option_d: q.option_d,
             concept_tag: q.concept_tag,
-            order_num: q.order_num
+            order_num: parseInt(q.order_num)
         }));
 
         return {
             success: true,
             quiz: {
-                id: l.quiz.id,
-                lesson_id: l.id,
+                id: parseInt(l.quiz.id),
+                lesson_id: numId,
                 title: l.quiz.title,
-                time_limit_mins: l.quiz.time_limit_mins,
-                pass_score: l.quiz.pass_score,
+                time_limit_mins: parseInt(l.quiz.time_limit_mins),
+                pass_score: parseFloat(l.quiz.pass_score),
                 total_questions: safeQuestions.length
             },
             questions: safeQuestions
@@ -350,7 +360,8 @@ const ClientAPI = {
     async submitQuiz(lessonId, userAnswers, timeSpentSeconds) {
         this.initStorage();
         const data = window.CPP_DATA || { lessons: [], badges: [] };
-        const l = (data.lessons || []).find(item => item.id === lessonId);
+        const numId = parseInt(lessonId);
+        const l = (data.lessons || []).find(item => parseInt(item.id) === numId);
         if (!l || !l.quiz) {
             return { success: false, message: 'Không tìm thấy bài kiểm tra.' };
         }
@@ -793,7 +804,7 @@ const ClientAPI = {
     async getStats() {
         this.initStorage();
         const data = window.CPP_DATA || { lessons: [], badges: [] };
-        const featured = (data.lessons || []).filter(l => [1, 3, 7, 10, 12, 15].includes(l.id));
+        const featured = (data.lessons || []).filter(l => [1, 3, 7, 10, 12, 15].includes(parseInt(l.id)));
 
         return {
             success: true,
@@ -814,7 +825,7 @@ const ClientAPI = {
         let lessonContext = '';
         if (lessonId) {
             const data = window.CPP_DATA || { lessons: [] };
-            const l = (data.lessons || []).find(item => item.id === lessonId);
+            const l = (data.lessons || []).find(item => parseInt(item.id) === parseInt(lessonId));
             if (l) lessonContext = `Đang hỗ trợ trong bài: **${l.title}** (${l.chapter_title}).\n\n`;
         }
 

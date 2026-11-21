@@ -34,7 +34,7 @@ const ProfileView = {
         container.innerHTML = `
             <div class="container py-5">
                 <!-- USER INFO HEADER CARD -->
-                <div class="card p-5 mb-5 anim-slide-up" style="border-left: 5px solid var(--primary); background: linear-gradient(135deg, rgba(99,102,241,0.08) 0%, rgba(18,24,38,0.9) 100%);">
+                <div class="card p-5 mb-5 anim-slide-up user-progress-banner" style="border-left: 5px solid var(--primary);">
                     <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 2rem;">
                         <div style="display: flex; align-items: center; gap: 1.5rem;">
                             <!-- AVATAR -->
