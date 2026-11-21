@@ -1,9 +1,15 @@
-// assets/js/home.js - Home Page Controller
+// assets/js/home.js - Home Page Controller with Instant Course Access & Modern Visuals
 
 const HomeView = {
+    allLessons: [],
+
     async render(container) {
-        // Fetch platform statistics
-        const statsRes = await Utils.fetchAPI('api/stats.php');
+        // Fetch platform statistics & full lessons list
+        const [statsRes, lessonsRes] = await Promise.all([
+            Utils.fetchAPI('api/stats.php'),
+            Utils.fetchAPI('api/lessons.php')
+        ]);
+
         const stats = statsRes.success ? statsRes.stats : {
             total_lessons: 15,
             total_students: 350,
@@ -11,9 +17,8 @@ const HomeView = {
             total_completions: 820,
             satisfaction_rate: '99.4%'
         };
-        const featuredLessons = statsRes.featured_lessons || [];
 
-        // Check auth user
+        this.allLessons = lessonsRes.success ? lessonsRes.lessons : [];
         const user = AppState.user;
 
         // Fetch user progress overview if logged in
@@ -24,10 +29,10 @@ const HomeView = {
                 const pStats = profileRes.stats;
                 const cur = pStats.current_lesson || { id: 1, title: 'Giới thiệu về ngôn ngữ lập trình C++' };
                 userProgressHtml = `
-                    <div class="card p-4 mb-5 anim-slide-up" style="border-left: 4px solid var(--primary); background: linear-gradient(135deg, rgba(99,102,241,0.1) 0%, rgba(18,24,38,0.8) 100%);">
+                    <div class="card p-4 mb-5 anim-slide-up" style="border-left: 4px solid var(--primary); background: linear-gradient(135deg, rgba(99,102,241,0.12) 0%, rgba(18,24,38,0.85) 100%);">
                         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
                             <div>
-                                <span class="badge badge-primary mb-2"><i class="fas fa-user-graduate"></i> Tiến độ cá nhân của bạn</span>
+                                <span class="badge badge-primary mb-2"><i class="fas fa-user-graduate"></i> Tiến độ học tập của bạn</span>
                                 <h3 style="font-size: 1.25rem; font-weight: 700;">Đang học: Bài ${cur.id} - ${cur.title}</h3>
                                 <p class="text-secondary" style="font-size: 0.9rem; margin-top: 0.35rem;">
                                     Đã hoàn thành <strong class="text-primary">${pStats.completed_lessons}/${pStats.total_lessons}</strong> bài học (${pStats.progress_percentage}%)
@@ -43,7 +48,7 @@ const HomeView = {
                                     </div>
                                 </div>
                                 <button class="btn btn-primary" onclick="AppRouter.navigate('#lesson?id=${cur.id}')">
-                                    <i class="fas fa-play"></i> Tiếp tục học
+                                    <i class="fas fa-play"></i> Tiếp tục học Bài ${cur.id}
                                 </button>
                             </div>
                         </div>
@@ -57,11 +62,11 @@ const HomeView = {
                 <!-- HERO SECTION -->
                 <div class="row align-items-center mb-5" style="display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 3.5rem; align-items: center;">
                     <div class="anim-slide-up">
-                        <div style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.35rem 0.85rem; border-radius: var(--radius-full); background: var(--primary-light); border: 1px solid var(--border-accent); margin-bottom: 1.5rem;">
-                            <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--primary); display: inline-block;"></span>
-                            <span style="font-size: 0.813rem; font-weight: 600; color: var(--primary);">Nền tảng C++ Chuẩn Đại Học • Tích hợp Trợ Lý AI</span>
+                        <div style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.95rem; border-radius: var(--radius-full); background: var(--primary-light); border: 1px solid var(--border-accent); margin-bottom: 1.5rem;">
+                            <span style="width: 8px; height: 8px; border-radius: 50%; background: #22c55e; display: inline-block; box-shadow: 0 0 10px #22c55e;"></span>
+                            <span style="font-size: 0.813rem; font-weight: 600; color: var(--primary);">Nền tảng C++ Chuẩn Đại Học • Kèm Cặp Bởi AI</span>
                         </div>
-                        <h1 style="font-size: 3.1rem; font-weight: 800; line-height: 1.15; letter-spacing: -0.03em; margin-bottom: 1.25rem;">
+                        <h1 style="font-size: 3.2rem; font-weight: 800; line-height: 1.15; letter-spacing: -0.03em; margin-bottom: 1.25rem;">
                             Chinh Phục Lập Trình <br>
                             <span class="gradient-text">C++ Toàn Diện</span> Cùng AI
                         </h1>
@@ -69,11 +74,11 @@ const HomeView = {
                             Khóa học thiết kế chuyên sâu dành cho <strong>sinh viên năm nhất ngành Công nghệ thông tin</strong> và <strong>Sư phạm Tin học</strong>. Học lý thuyết bài bản, thực hành tương tác, làm bài test trắc nghiệm và nhận phân tích đánh giá năng lực từ AI thông minh.
                         </p>
                         <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
-                            <button class="btn btn-primary btn-lg btn-glow" onclick="AppRouter.navigate('#lessons')">
-                                <i class="fas fa-book-open"></i> Bắt đầu học ngay
+                            <button class="btn btn-primary btn-lg btn-glow" onclick="AppRouter.navigate('#lesson?id=1')" style="font-weight: 700;">
+                                <i class="fas fa-rocket"></i> Vào học Bài 1 ngay
                             </button>
-                            <button class="btn btn-secondary btn-lg" onclick="AppRouter.navigate('#lessons')">
-                                <i class="fas fa-list-check"></i> Xem danh mục 15 bài học
+                            <button class="btn btn-secondary btn-lg" onclick="document.getElementById('all-lessons-section').scrollIntoView({behavior:'smooth'})">
+                                <i class="fas fa-book-bookmark"></i> Xem trọn bộ 15 bài học
                             </button>
                         </div>
                     </div>
@@ -87,32 +92,32 @@ const HomeView = {
                                     <span class="code-dot dot-yellow"></span>
                                     <span class="code-dot dot-green"></span>
                                 </div>
-                                <span style="font-weight: 600; color: var(--text-primary); margin-left: 0.5rem;"><i class="fas fa-terminal"></i> main.cpp</span>
+                                <span style="font-weight: 600; color: var(--text-primary); margin-left: 0.5rem; font-family: var(--font-mono);"><i class="fas fa-terminal"></i> main.cpp</span>
                             </div>
                             <span class="badge badge-primary">C++20 ISO</span>
                         </div>
-                        <div class="code-content" style="padding: 1.25rem; font-size: 0.85rem; background: #090e17;">
-<pre style="margin: 0; color: #cbd5e1;"><code><span style="color: #f43f5e;">#include</span> <span style="color: #38bdf8;">&lt;iostream&gt;</span>
-<span style="color: #f43f5e;">#include</span> <span style="color: #38bdf8;">&lt;string&gt;</span>
-<span style="color: #818cf8;">using namespace</span> std;
+                        <div class="code-content" style="padding: 1.25rem; font-size: 0.85rem; background: #070b14;">
+<pre style="margin: 0; color: #cbd5e1;"><code><span style="color: #f43f5e; font-weight: 600;">#include</span> <span style="color: #34d399;">&lt;iostream&gt;</span>
+<span style="color: #f43f5e; font-weight: 600;">#include</span> <span style="color: #34d399;">&lt;string&gt;</span>
+<span style="color: #f43f5e; font-weight: 600;">using namespace</span> std;
 
-<span style="color: #fbbf24;">int</span> <span style="color: #60a5fa;">main</span>() {
-    string sinhVien = <span style="color: #a7f3d0;">"K72 CNTT &amp; SP Tin"</span>;
-    cout &lt;&lt; <span style="color: #a7f3d0;">"Chao mung: "</span> &lt;&lt; sinhVien &lt;&lt; endl;
-    cout &lt;&lt; <span style="color: #a7f3d0;">"Khoi dau hanh trinh tro thanh Lap trinh vien!"</span> &lt;&lt; endl;
-    <span style="color: #818cf8;">return</span> <span style="color: #f59e0b;">0</span>;
+<span style="color: #fbbf24; font-weight: 600;">int</span> <span style="color: #38bdf8; font-weight: 600;">main</span>() {
+    string chaoMung = <span style="color: #34d399;">"Xin chao Sinh vien CNTT &amp; Su pham Tin!"</span>;
+    cout &lt;&lt; chaoMung &lt;&lt; endl;
+    cout &lt;&lt; <span style="color: #34d399;">"Bat dau hanh trinh tro thanh Lap trinh vien C++ dinh cao!"</span> &lt;&lt; endl;
+    <span style="color: #a78bfa; font-weight: 600;">return</span> <span style="color: #fb923c;">0</span>;
 }</code></pre>
                         </div>
-                        <div style="background: rgba(0,0,0,0.3); padding: 0.85rem 1.25rem; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
-                            <span style="font-size: 0.8rem; color: var(--text-muted);"><i class="fas fa-check-circle text-success"></i> Biên dịch thành công (0 warning)</span>
-                            <button class="btn btn-sm btn-outline" id="hero-run-btn" onclick="HomeView.simulateRunCode(this)">
-                                <i class="fas fa-play text-success"></i> Chạy thử nghiệm
+                        <div style="background: rgba(0,0,0,0.35); padding: 0.85rem 1.25rem; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 0.8rem; color: var(--text-muted);"><i class="fas fa-check-circle text-success"></i> Biên dịch C++20 sẵn sàng</span>
+                            <button class="btn btn-sm btn-success" id="hero-run-btn" onclick="HomeView.simulateRunCode(this)">
+                                <i class="fas fa-play"></i> Chạy thử nghiệm ngay
                             </button>
                         </div>
                         <div id="hero-run-output" style="display: none; padding: 0.85rem 1.25rem; background: #040810; font-family: var(--font-mono); font-size: 0.8rem; color: #4ade80; border-top: 1px dashed var(--border-color);">
-                            &gt; Chao mung: K72 CNTT &amp; SP Tin<br>
-                            &gt; Khoi dau hanh trinh tro thanh Lap trinh vien!<br>
-                            &gt; Program exited with code: 0 (0.002s)
+                            &gt; Xin chao Sinh vien CNTT &amp; Su pham Tin!<br>
+                            &gt; Bat dau hanh trinh tro thanh Lap trinh vien C++ dinh cao!<br>
+                            <span style="color: #94a3b8;">&gt; [Process exited with code 0 in 0.002s]</span>
                         </div>
                     </div>
                 </div>
@@ -123,8 +128,8 @@ const HomeView = {
                 <!-- PLATFORM STATISTICS COUNTERS -->
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 5rem;">
                     <div class="card" style="padding: 1.75rem; text-align: center;">
-                        <div style="font-size: 2.5rem; font-weight: 800; color: var(--primary); line-height: 1;">${stats.total_lessons}</div>
-                        <div style="font-size: 0.9rem; font-weight: 600; margin-top: 0.5rem;">Bài học chuẩn C++</div>
+                        <div style="font-size: 2.5rem; font-weight: 800; color: var(--primary); line-height: 1;">15</div>
+                        <div style="font-size: 0.9rem; font-weight: 600; margin-top: 0.5rem;">Bài học C++ Chuẩn</div>
                         <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.25rem;">Từ cơ bản đến hướng đối tượng</div>
                     </div>
                     <div class="card" style="padding: 1.75rem; text-align: center;">
@@ -141,6 +146,49 @@ const HomeView = {
                         <div style="font-size: 2.5rem; font-weight: 800; color: var(--warning); line-height: 1;">${stats.satisfaction_rate}</div>
                         <div style="font-size: 0.9rem; font-weight: 600; margin-top: 0.5rem;">Hài lòng &amp; Hiểu bài</div>
                         <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.25rem;">AI đánh giá &amp; kèm cặp 24/7</div>
+                    </div>
+                </div>
+
+                <!-- DIRECT 15-LESSONS SHOWCASE (HỌC NGAY TẠI TRANG CHỦ) -->
+                <div id="all-lessons-section" class="mb-5" style="scroll-margin-top: 90px;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+                        <div>
+                            <span class="badge badge-primary mb-2"><i class="fas fa-layer-group"></i> Chương Trình 15 Bài Học C++</span>
+                            <h2 style="font-size: 2.2rem; font-weight: 800; letter-spacing: -0.02em;">Chọn Bài Học Để Vào Học Ngay</h2>
+                            <p class="text-secondary" style="margin-top: 0.35rem;">
+                                Toàn bộ 15 bài học đã sẵn sàng kèm lý thuyết chi tiết, code mẫu C++, lỗi thường gặp và bài kiểm tra trắc nghiệm AI.
+                            </p>
+                        </div>
+                        <button class="btn btn-outline" onclick="AppRouter.navigate('#lessons')">
+                            Xem lộ trình dạng chương <i class="fas fa-arrow-right"></i>
+                        </button>
+                    </div>
+
+                    <!-- CHAPTER FILTER TABS -->
+                    <div style="display: flex; gap: 0.5rem; overflow-x: auto; padding-bottom: 1rem; margin-bottom: 1.75rem;">
+                        <button class="btn btn-sm btn-primary filter-tab active" onclick="HomeView.filterByChapter('all', this)">
+                            Tất cả 15 bài
+                        </button>
+                        <button class="btn btn-sm btn-secondary filter-tab" onclick="HomeView.filterByChapter(1, this)">
+                            Chương 1: Cơ bản (Bài 1-4)
+                        </button>
+                        <button class="btn btn-sm btn-secondary filter-tab" onclick="HomeView.filterByChapter(2, this)">
+                            Chương 2: Rẽ nhánh &amp; Vòng lặp (Bài 5-7)
+                        </button>
+                        <button class="btn btn-sm btn-secondary filter-tab" onclick="HomeView.filterByChapter(3, this)">
+                            Chương 3: Mảng &amp; Chuỗi (Bài 8, 9, 13)
+                        </button>
+                        <button class="btn btn-sm btn-secondary filter-tab" onclick="HomeView.filterByChapter(4, this)">
+                            Chương 4: Hàm &amp; Con trỏ (Bài 10-12)
+                        </button>
+                        <button class="btn btn-sm btn-secondary filter-tab" onclick="HomeView.filterByChapter(5, this)">
+                            Chương 5: Struct &amp; OOP (Bài 14-15)
+                        </button>
+                    </div>
+
+                    <!-- 15 LESSONS GRID -->
+                    <div id="home-lessons-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 1.5rem;">
+                        ${this.renderLessonCards(this.allLessons)}
                     </div>
                 </div>
 
@@ -189,51 +237,15 @@ const HomeView = {
                     </div>
                 </div>
 
-                <!-- FEATURED LESSONS SECTION -->
-                <div class="mb-5">
-                    <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
-                        <div>
-                            <span class="badge badge-primary mb-2"><i class="fas fa-layer-group"></i> Lộ Trình Nổi Bật</span>
-                            <h2 style="font-size: 2rem; font-weight: 800;">Các Bài Học Trọng Tâm</h2>
-                        </div>
-                        <button class="btn btn-outline" onclick="AppRouter.navigate('#lessons')">
-                            Xem tất cả 15 bài học <i class="fas fa-arrow-right"></i>
-                        </button>
-                    </div>
-
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.75rem;">
-                        ${featuredLessons.map(l => `
-                            <div class="card p-4" style="display: flex; flex-direction: column; justify-content: space-between;">
-                                <div>
-                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
-                                        <span class="badge badge-secondary" style="font-size: 0.75rem;">Bài ${l.id}</span>
-                                        <span class="text-muted" style="font-size: 0.8rem;"><i class="fas fa-clock"></i> ${l.duration_mins} phút</span>
-                                    </div>
-                                    <h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--text-primary);">${l.title}</h3>
-                                    <p class="text-secondary" style="font-size: 0.875rem; line-height: 1.5; margin-bottom: 1.25rem;">
-                                        ${l.description}
-                                    </p>
-                                </div>
-                                <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-color); padding-top: 1rem;">
-                                    <span style="font-size: 0.813rem; color: var(--text-muted);"><i class="fas fa-file-lines"></i> 10 câu trắc nghiệm</span>
-                                    <button class="btn btn-sm btn-outline" onclick="AppRouter.navigate('#lesson?id=${l.id}')">
-                                        Học bài <i class="fas fa-chevron-right"></i>
-                                    </button>
-                                </div>
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
-
                 <!-- CALL TO ACTION BANNER -->
-                <div class="card p-5 text-center anim-fade-in" style="background: radial-gradient(circle at 50% 50%, rgba(99,102,241,0.18) 0%, rgba(18,24,38,0.95) 100%); border-color: var(--border-accent);">
+                <div class="card p-5 text-center anim-fade-in" style="background: radial-gradient(circle at 50% 50%, rgba(99,102,241,0.2) 0%, rgba(18,24,38,0.95) 100%); border-color: var(--border-accent);">
                     <h2 style="font-size: 2.25rem; font-weight: 800; margin-bottom: 1rem;">Sẵn sàng bứt phá điểm số C++ kỳ này?</h2>
                     <p class="text-secondary" style="font-size: 1.05rem; max-width: 600px; margin: 0 auto 2rem;">
                         Tham gia ngay hôm nay để trải nghiệm hệ thống học tập thông minh, vượt qua nỗi sợ con trỏ và chinh phục điểm A môn Lập trình C++!
                     </p>
                     <div style="display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap;">
-                        <button class="btn btn-primary btn-lg" onclick="AppRouter.navigate('#lessons')">
-                            <i class="fas fa-rocket"></i> Bắt đầu ngay - Hoàn toàn miễn phí
+                        <button class="btn btn-primary btn-lg btn-glow" onclick="AppRouter.navigate('#lesson?id=1')">
+                            <i class="fas fa-rocket"></i> Bắt đầu Bài 1 ngay - Miễn phí
                         </button>
                     </div>
                 </div>
@@ -241,16 +253,81 @@ const HomeView = {
         `;
     },
 
+    renderLessonCards(lessons) {
+        if (!lessons || lessons.length === 0) {
+            return `<div class="p-5 text-center text-muted" style="grid-column: 1 / -1;">Đang tải danh sách bài học...</div>`;
+        }
+
+        return lessons.map(l => {
+            const isDone = l.is_completed;
+            const quiz = l.quiz_info || {};
+            let statusBadge = `<span class="badge badge-secondary"><i class="fas fa-circle-dot"></i> Sẵn sàng học</span>`;
+            if (isDone) {
+                statusBadge = `<span class="badge badge-success"><i class="fas fa-check-circle"></i> Đã hoàn thành</span>`;
+            } else if (quiz.has_passed) {
+                statusBadge = `<span class="badge badge-warning"><i class="fas fa-award"></i> Đã đạt Test (${quiz.best_score}đ)</span>`;
+            }
+
+            return `
+                <div class="card p-4 lesson-card" data-chapter="${l.chapter}" style="display: flex; flex-direction: column; justify-content: space-between; border-left: ${isDone ? '4px solid var(--success)' : '1px solid var(--border-color)'}; transition: var(--transition);">
+                    <div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.85rem;">
+                            <span style="font-size: 0.813rem; font-weight: 700; color: var(--primary);"><i class="fas fa-bookmark"></i> BÀI ${l.id}</span>
+                            ${statusBadge}
+                        </div>
+                        <h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 0.5rem; line-height: 1.4;">${l.title}</h3>
+                        <p class="text-secondary" style="font-size: 0.875rem; line-height: 1.5; margin-bottom: 1.25rem;">
+                            ${l.description}
+                        </p>
+                    </div>
+                    <div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-color); padding-top: 1rem; margin-bottom: 0.75rem; font-size: 0.813rem;">
+                            <span class="text-muted"><i class="fas fa-clock"></i> ${l.duration_mins} phút</span>
+                            <span class="text-muted"><i class="fas fa-clipboard-check"></i> 10 câu trắc nghiệm</span>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                            <button class="btn btn-sm btn-primary" onclick="AppRouter.navigate('#lesson?id=${l.id}')">
+                                <i class="fas fa-book-open"></i> Vào học bài
+                            </button>
+                            <button class="btn btn-sm btn-secondary" onclick="AppRouter.navigate('#quiz?lesson_id=${l.id}')" title="Làm bài kiểm tra trắc nghiệm">
+                                <i class="fas fa-pen-to-square"></i> Làm Test
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    },
+
+    filterByChapter(chapter, btn) {
+        document.querySelectorAll('.filter-tab').forEach(b => {
+            b.classList.remove('btn-primary', 'active');
+            b.classList.add('btn-secondary');
+        });
+        btn.classList.add('btn-primary', 'active');
+        btn.classList.remove('btn-secondary');
+
+        const cards = document.querySelectorAll('#home-lessons-grid .lesson-card');
+        cards.forEach(card => {
+            const ch = card.getAttribute('data-chapter');
+            if (chapter === 'all' || ch == chapter) {
+                card.style.display = 'flex';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+    },
+
     simulateRunCode(btn) {
         const out = document.getElementById('hero-run-output');
         if (!out) return;
         btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang chạy...';
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang chạy C++20...';
         setTimeout(() => {
             out.style.display = 'block';
-            btn.innerHTML = '<i class="fas fa-check text-success"></i> Đã hoàn thành';
+            btn.innerHTML = '<i class="fas fa-check text-success"></i> Đã hoàn thành (0s)';
             btn.disabled = false;
-        }, 600);
+        }, 500);
     }
 };
 

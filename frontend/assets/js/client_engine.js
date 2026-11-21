@@ -57,6 +57,16 @@ const ClientAPI = {
         if (!localStorage.getItem('cpp_chat_history')) {
             localStorage.setItem('cpp_chat_history', JSON.stringify([]));
         }
+
+        // Initialize active student session by default for instant learning
+        if (!localStorage.getItem('cpp_current_user') && !localStorage.getItem('cpp_logged_out')) {
+            const initialUsers = JSON.parse(localStorage.getItem('cpp_users') || '[]');
+            if (initialUsers.length > 0) {
+                const defaultUser = { ...initialUsers[0] };
+                delete defaultUser.password;
+                localStorage.setItem('cpp_current_user', JSON.stringify(defaultUser));
+            }
+        }
     },
 
     // Current logged in user
@@ -91,6 +101,7 @@ const ClientAPI = {
             return { success: false, message: 'Tên đăng nhập hoặc mật khẩu không chính xác.' };
         }
 
+        localStorage.removeItem('cpp_logged_out');
         this.setCurrentUser(user);
         return { success: true, message: 'Đăng nhập thành công!', user: this.getCurrentUser() };
     },
@@ -120,12 +131,14 @@ const ClientAPI = {
 
         users.push(newUser);
         localStorage.setItem('cpp_users', JSON.stringify(users));
+        localStorage.removeItem('cpp_logged_out');
         this.setCurrentUser(newUser);
 
         return { success: true, message: 'Đăng ký tài khoản thành công!', user: this.getCurrentUser() };
     },
 
     async logout() {
+        localStorage.setItem('cpp_logged_out', '1');
         this.setCurrentUser(null);
         return { success: true, message: 'Đã đăng xuất thành công.' };
     },

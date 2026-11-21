@@ -102,6 +102,45 @@ const Utils = {
         return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
     },
 
+    // C++ Syntax Highlighting Engine (Linear/VSCode style)
+    highlightCpp(rawCode) {
+        if (!rawCode) return '';
+        let code = this.escapeHtml(rawCode);
+
+        // Preprocessor and Directives
+        code = code.replace(/(&lt;iostream&gt;|&lt;string&gt;|&lt;vector&gt;|&lt;cmath&gt;|&lt;iomanip&gt;|&lt;algorithm&gt;|&lt;cstring&gt;)/g, '<span class="tok-string">$1</span>');
+        code = code.replace(/(#include|#define|#ifndef|#endif|#pragma)/g, '<span class="tok-preproc">$1</span>');
+        code = code.replace(/(using\s+namespace\s+std;)/g, '<span class="tok-preproc">$1</span>');
+
+        // String literals & char literals
+        code = code.replace(/(&quot;[\s\S]*?&quot;)/g, '<span class="tok-string">$1</span>');
+        code = code.replace(/(&#039;[\s\S]*?&#039;)/g, '<span class="tok-string">$1</span>');
+
+        // Single line and multi-line comments
+        code = code.replace(/(\/\/[^\n]*)/g, '<span class="tok-comment">$1</span>');
+        code = code.replace(/(\/\*[\s\S]*?\*\/)/g, '<span class="tok-comment">$1</span>');
+
+        // Types
+        const types = ['int', 'float', 'double', 'char', 'bool', 'void', 'string', 'auto', 'long', 'short', 'unsigned', 'size_t', 'struct', 'class'];
+        const typeRegex = new RegExp(`\\b(${types.join('|')})\\b`, 'g');
+        code = code.replace(typeRegex, '<span class="tok-type">$1</span>');
+
+        // Control Keywords
+        const keywords = ['return', 'if', 'else', 'switch', 'case', 'default', 'break', 'continue', 'for', 'while', 'do', 'new', 'delete', 'nullptr', 'sizeof', 'public', 'private', 'protected', 'true', 'false', 'const'];
+        const kwRegex = new RegExp(`\\b(${keywords.join('|')})\\b`, 'g');
+        code = code.replace(kwRegex, '<span class="tok-kw">$1</span>');
+
+        // Standard I/O and common identifiers
+        const funcs = ['cout', 'cin', 'endl', 'main', 'vector', 'printf', 'scanf', 'std'];
+        const funcRegex = new RegExp(`\\b(${funcs.join('|')})\\b`, 'g');
+        code = code.replace(funcRegex, '<span class="tok-ident">$1</span>');
+
+        // Numbers
+        code = code.replace(/\b(\d+(\.\d+)?f?)\b/g, '<span class="tok-num">$1</span>');
+
+        return code;
+    },
+
     // One-click code copy
     async copyCode(text, btn) {
         try {

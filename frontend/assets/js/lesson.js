@@ -36,7 +36,7 @@ const LessonView = {
                 <div style="margin-bottom: 2.5rem;">
                     <div style="display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 1rem;">
                         <div>
-                            <span class="badge badge-primary mb-2"><i class="fas fa-graduation-cap"></i> Khung Chương Trình Chuẩn</span>
+                            <span class="badge badge-primary mb-2"><i class="fas fa-graduation-cap"></i> Khung Chương Trình Chuẩn Đại Học</span>
                             <h1 style="font-size: 2.4rem; font-weight: 800; letter-spacing: -0.02em;">Lộ Trình 15 Bài Học C++</h1>
                             <p class="text-secondary" style="font-size: 1rem; margin-top: 0.35rem;">
                                 Hệ thống kiến thức từ nhập môn cơ bản đến tư duy Hướng đối tượng nâng cao, tích hợp bài kiểm tra và AI đánh giá sau mỗi bài.
@@ -62,11 +62,11 @@ const LessonView = {
                                     ${ch.lessons.map(l => {
                                         const isDone = l.is_completed;
                                         const quiz = l.quiz_info || {};
-                                        let statusBadge = `<span class="badge badge-secondary"><i class="fas fa-circle-dot"></i> Chưa học</span>`;
+                                        let statusBadge = `<span class="badge badge-secondary"><i class="fas fa-circle-dot"></i> Sẵn sàng học</span>`;
                                         if (isDone) {
                                             statusBadge = `<span class="badge badge-success"><i class="fas fa-check-circle"></i> Đã hoàn thành</span>`;
                                         } else if (quiz.has_passed) {
-                                            statusBadge = `<span class="badge badge-warning"><i class="fas fa-award"></i> Đã pass Test (${quiz.best_score}đ)</span>`;
+                                            statusBadge = `<span class="badge badge-warning"><i class="fas fa-award"></i> Đã đạt Test (${quiz.best_score}đ)</span>`;
                                         }
 
                                         return `
@@ -81,11 +81,19 @@ const LessonView = {
                                                         ${l.description}
                                                     </p>
                                                 </div>
-                                                <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-color); padding-top: 1rem; font-size: 0.813rem;">
-                                                    <span class="text-muted"><i class="fas fa-clock"></i> ${l.duration_mins} phút • 10 câu test</span>
-                                                    <button class="btn btn-sm ${isDone ? 'btn-secondary' : 'btn-primary'}" onclick="AppRouter.navigate('#lesson?id=${l.id}')">
-                                                        ${isDone ? 'Xem lại bài' : 'Vào học ngay'} <i class="fas fa-arrow-right"></i>
-                                                    </button>
+                                                <div style="border-top: 1px solid var(--border-color); padding-top: 1rem;">
+                                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; font-size: 0.813rem;">
+                                                        <span class="text-muted"><i class="fas fa-clock"></i> ${l.duration_mins} phút</span>
+                                                        <span class="text-muted"><i class="fas fa-clipboard-check"></i> 10 câu trắc nghiệm</span>
+                                                    </div>
+                                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                                                        <button class="btn btn-sm ${isDone ? 'btn-secondary' : 'btn-primary'}" onclick="AppRouter.navigate('#lesson?id=${l.id}')">
+                                                            <i class="fas fa-book-open"></i> ${isDone ? 'Xem lại bài' : 'Vào học ngay'}
+                                                        </button>
+                                                        <button class="btn btn-sm btn-outline" onclick="AppRouter.navigate('#quiz?lesson_id=${l.id}')">
+                                                            <i class="fas fa-pen-to-square"></i> Làm Test
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             </div>
                                         `;
@@ -103,8 +111,8 @@ const LessonView = {
         const q = query.trim().toLowerCase();
         const cards = document.querySelectorAll('.lesson-card');
         cards.forEach(card => {
-            const title = card.getAttribute('data-title');
-            const desc = card.getAttribute('data-desc');
+            const title = card.getAttribute('data-title') || '';
+            const desc = card.getAttribute('data-desc') || '';
             if (!q || title.includes(q) || desc.includes(q)) {
                 card.style.display = 'flex';
             } else {
@@ -122,7 +130,11 @@ const LessonView = {
             </div>
         `;
 
-        const res = await Utils.fetchAPI(`api/lessons.php?id=${lessonId}`);
+        const [res, allRes] = await Promise.all([
+            Utils.fetchAPI(`api/lessons.php?id=${lessonId}`),
+            Utils.fetchAPI('api/lessons.php')
+        ]);
+
         if (!res.success) {
             container.innerHTML = `
                 <div class="container py-5 text-center">
@@ -135,161 +147,214 @@ const LessonView = {
         }
 
         const l = res.lesson;
+        const allLessons = allRes.success ? allRes.lessons : [];
 
         // Theory markdown rendering helper
         const formattedTheory = this.renderMarkdownContent(l.theory_content);
 
         container.innerHTML = `
-            <div class="container py-4">
-                <!-- BREADCRUMB & NAV -->
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 0.75rem;">
-                    <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem;">
-                        <a href="#lessons" class="text-secondary hover-primary"><i class="fas fa-book"></i> Danh mục bài học</a>
-                        <span class="text-muted">/</span>
-                        <span class="text-muted">${l.chapter_title}</span>
-                        <span class="text-muted">/</span>
-                        <span style="font-weight: 600; color: var(--text-primary);">Bài ${l.id}</span>
+            <!-- READING PROGRESS BAR -->
+            <div id="reading-progress-bar" class="reading-progress-bar"></div>
+
+            <!-- STICKY LESSON HEADER -->
+            <div class="lesson-sticky-header">
+                <div class="container" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.65rem;">
+                    <div style="display: flex; align-items: center; gap: 0.65rem;">
+                        <a href="#lessons" class="btn btn-sm btn-secondary" title="Về danh mục 15 bài học">
+                            <i class="fas fa-list"></i> Danh mục
+                        </a>
+                        <select class="form-control" style="width: auto; padding: 0.35rem 0.75rem; font-size: 0.85rem; font-weight: 600; cursor: pointer;" onchange="AppRouter.navigate('#lesson?id=' + this.value)">
+                            ${allLessons.map(item => `
+                                <option value="${item.id}" ${item.id === l.id ? 'selected' : ''}>
+                                    Bài ${item.id}: ${item.title} ${item.is_completed ? '✔' : ''}
+                                </option>
+                            `).join('')}
+                        </select>
                     </div>
-                    <div style="display: flex; gap: 0.5rem;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
                         ${l.prev_lesson ? `
                             <button class="btn btn-sm btn-secondary" onclick="AppRouter.navigate('#lesson?id=${l.prev_lesson.id}')" title="${l.prev_lesson.title}">
-                                <i class="fas fa-chevron-left"></i> Bài trước
+                                <i class="fas fa-chevron-left"></i> Bài ${l.prev_lesson.id}
                             </button>
                         ` : ''}
                         ${l.next_lesson ? `
                             <button class="btn btn-sm btn-secondary" onclick="AppRouter.navigate('#lesson?id=${l.next_lesson.id}')" title="${l.next_lesson.title}">
-                                Bài sau <i class="fas fa-chevron-right"></i>
+                                Bài ${l.next_lesson.id} <i class="fas fa-chevron-right"></i>
                             </button>
                         ` : ''}
+                        <button class="btn btn-sm btn-primary" onclick="AppRouter.navigate('#quiz?lesson_id=${l.id}')">
+                            <i class="fas fa-clipboard-question"></i> Làm Test trắc nghiệm (${l.id}/15)
+                        </button>
                     </div>
                 </div>
+            </div>
 
+            <div class="container py-2">
                 <!-- LESSON HEADER CARD -->
-                <div class="card p-4 mb-4" style="border-left: 4px solid var(--primary);">
+                <div class="card p-4 mb-4" style="border-left: 4px solid var(--primary); background: linear-gradient(135deg, rgba(99,102,241,0.08) 0%, rgba(18,24,38,0.7) 100%);">
                     <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
                         <div>
-                            <span class="badge badge-purple mb-2">Bài ${l.id} • ${l.chapter_title}</span>
-                            <h1 style="font-size: 2.1rem; font-weight: 800; line-height: 1.25; margin-bottom: 0.5rem;">${l.title}</h1>
-                            <p class="text-secondary" style="font-size: 1rem; max-width: 800px;">${l.description}</p>
+                            <span class="badge badge-purple mb-2"><i class="fas fa-layer-group"></i> Bài ${l.id} • ${l.chapter_title}</span>
+                            <h1 style="font-size: 2.2rem; font-weight: 800; line-height: 1.25; margin-bottom: 0.5rem;">${l.title}</h1>
+                            <p class="text-secondary" style="font-size: 1rem; max-width: 820px;">${l.description}</p>
                         </div>
                         <div style="text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 0.5rem;">
                             <span class="badge ${l.is_completed ? 'badge-success' : (l.has_passed_quiz ? 'badge-warning' : 'badge-secondary')}" style="font-size: 0.85rem; padding: 0.4rem 0.85rem;">
-                                ${l.is_completed ? '<i class="fas fa-check-double"></i> Đã hoàn thành' : (l.has_passed_quiz ? `<i class="fas fa-award"></i> Đã đạt Test (${l.best_score}đ)` : '<i class="fas fa-hourglass-start"></i> Chưa hoàn thành')}
+                                ${l.is_completed ? '<i class="fas fa-check-double"></i> Đã hoàn thành bài học' : (l.has_passed_quiz ? `<i class="fas fa-award"></i> Đã đạt Test (${l.best_score}đ)` : '<i class="fas fa-hourglass-start"></i> Đang học')}
                             </span>
-                            <span class="text-muted" style="font-size: 0.8rem;"><i class="fas fa-clock"></i> Thời lượng dự kiến: ${l.duration_mins} phút</span>
+                            <span class="text-muted" style="font-size: 0.8rem;"><i class="fas fa-clock"></i> Thời lượng: ${l.duration_mins} phút • 10 câu trắc nghiệm</span>
                         </div>
                     </div>
                 </div>
 
-                <!-- TABS BAR -->
-                <div style="display: flex; gap: 0.75rem; border-bottom: 1px solid var(--border-color); margin-bottom: 2rem;">
-                    <button class="btn btn-outline active-tab" id="tab-btn-theory" onclick="LessonView.switchTab('theory')" style="border-bottom: 3px solid var(--primary); border-radius: 0; font-weight: 700; color: var(--primary);">
-                        <i class="fas fa-book-open"></i> Nội dung lý thuyết &amp; Ví dụ
-                    </button>
-                    <button class="btn btn-outline" id="tab-btn-quiz" onclick="AppRouter.navigate('#quiz?lesson_id=${l.id}')" style="border-bottom: 3px solid transparent; border-radius: 0;">
-                        <i class="fas fa-clipboard-question"></i> Bài kiểm tra trắc nghiệm (10 câu)
-                    </button>
+                <!-- OBJECTIVES -->
+                <div class="card p-4 mb-4" style="background: rgba(99, 102, 241, 0.05); border-color: rgba(99, 102, 241, 0.25);">
+                    <h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 0.85rem; color: var(--primary); display: flex; align-items: center; gap: 0.5rem;">
+                        <i class="fas fa-bullseye"></i> Mục tiêu cần đạt của bài học
+                    </h3>
+                    <ul style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 0.65rem;">
+                        ${(l.objectives || []).map(obj => `
+                            <li style="display: flex; align-items: flex-start; gap: 0.6rem; font-size: 0.9rem;">
+                                <i class="fas fa-check text-success" style="margin-top: 4px;"></i>
+                                <span>${obj}</span>
+                            </li>
+                        `).join('')}
+                    </ul>
                 </div>
 
-                <!-- TAB CONTENT: THEORY -->
-                <div id="lesson-tab-theory" class="anim-fade-in">
-                    <!-- OBJECTIVES -->
-                    <div class="card p-4 mb-4" style="background: rgba(99, 102, 241, 0.05); border-color: rgba(99, 102, 241, 0.25);">
-                        <h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 0.85rem; color: var(--primary); display: flex; align-items: center; gap: 0.5rem;">
-                            <i class="fas fa-bullseye"></i> Mục tiêu cần đạt của bài học
-                        </h3>
-                        <ul style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 0.65rem;">
-                            ${(l.objectives || []).map(obj => `
-                                <li style="display: flex; align-items: flex-start; gap: 0.6rem; font-size: 0.9rem;">
-                                    <i class="fas fa-check text-success" style="margin-top: 4px;"></i>
-                                    <span>${obj}</span>
-                                </li>
-                            `).join('')}
-                        </ul>
-                    </div>
+                <!-- DETAILED THEORY CONTENT -->
+                <div class="card p-4 mb-4 theory-markdown" style="font-size: 0.95rem; line-height: 1.8;">
+                    ${formattedTheory}
+                </div>
 
-                    <!-- DETAILED THEORY CONTENT -->
-                    <div class="card p-4 mb-4 theory-markdown" style="font-size: 0.95rem; line-height: 1.8;">
-                        ${formattedTheory}
-                    </div>
-
-                    <!-- CODE EXAMPLES SECTION -->
-                    <div class="card p-4 mb-4">
-                        <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.5rem;">
-                            <i class="fas fa-code text-primary"></i> Ví dụ minh họa bằng code C++
+                <!-- CODE EXAMPLES SECTION -->
+                <div class="card p-4 mb-4">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.5rem;">
+                        <h3 style="font-size: 1.25rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
+                            <i class="fas fa-code text-primary"></i> Ví dụ minh họa bằng code C++ chuẩn ISO
                         </h3>
-                        ${(l.code_examples || []).map((ex, idx) => `
-                            <div class="mb-4" style="border: 1px solid var(--border-color); border-radius: var(--radius-md); overflow: hidden;">
-                                <div style="padding: 0.85rem 1.25rem; background: var(--bg-tertiary); font-weight: 600; display: flex; justify-content: space-between; align-items: center;">
-                                    <span>Ví dụ ${idx + 1}: ${ex.title}</span>
+                        <span class="text-muted" style="font-size: 0.8rem;"><i class="fas fa-bolt text-warning"></i> Bạn có thể bấm "Chạy code C++" để chạy mô phỏng ngay</span>
+                    </div>
+                    ${(l.code_examples || []).map((ex, idx) => `
+                        <div class="mb-4" style="border: 1px solid var(--border-color); border-radius: var(--radius-md); overflow: hidden; box-shadow: var(--shadow-sm);">
+                            <div style="padding: 0.75rem 1.25rem; background: var(--bg-tertiary); font-weight: 600; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                                <div style="display: flex; align-items: center; gap: 0.6rem;">
+                                    <span class="badge badge-primary">Ví dụ ${idx + 1}</span>
+                                    <span style="font-size: 0.95rem; font-weight: 600;">${ex.title}</span>
+                                </div>
+                                <div style="display: flex; gap: 0.5rem;">
+                                    <button class="btn btn-sm btn-success" onclick="LessonView.runCodeExample(${idx}, \`${Utils.escapeHtml(ex.output)}\`, this)">
+                                        <i class="fas fa-play"></i> Chạy code C++
+                                    </button>
                                     <button class="copy-btn" onclick="Utils.copyCode(\`${Utils.escapeHtml(ex.code)}\`, this)">
-                                        <i class="fas fa-copy"></i> Sao chép code
+                                        <i class="fas fa-copy"></i> Sao chép
                                     </button>
                                 </div>
-                                <div class="code-box" style="margin: 0; border: none; border-radius: 0;">
-                                    <pre class="code-content" style="margin: 0;"><code>${Utils.escapeHtml(ex.code)}</code></pre>
+                            </div>
+                            <div class="code-box" style="margin: 0; border: none; border-radius: 0;">
+                                <pre class="code-content" style="margin: 0;"><code>${Utils.highlightCpp(ex.code)}</code></pre>
+                            </div>
+                            <div id="example-terminal-${idx}" class="terminal-box" style="display: none;">
+                                <div class="terminal-header">
+                                    <span><i class="fas fa-terminal"></i> Trình mô phỏng Console C++20 (g++ 13.2 -O2)</span>
+                                    <span class="text-success"><i class="fas fa-circle-check"></i> Trạng thái: Hoàn tất</span>
                                 </div>
-                                <div style="padding: 1rem 1.25rem; background: var(--bg-card); font-size: 0.875rem; border-top: 1px solid var(--border-color);">
-                                    <div style="margin-bottom: 0.5rem;"><strong>Dữ liệu vào (Input):</strong> <code>${ex.input || 'Không có'}</code></div>
-                                    <div style="margin-bottom: 0.5rem;"><strong>Kết quả ra (Output):</strong> <pre style="background: var(--bg-primary); padding: 0.5rem; border-radius: 4px; margin-top: 4px; font-family: var(--font-mono);">${Utils.escapeHtml(ex.output)}</pre></div>
-                                    <div style="color: var(--text-secondary); margin-top: 0.5rem;"><strong>Giải thích từng đoạn:</strong> ${ex.explanation}</div>
+                                <div style="color: #94a3b8; font-size: 0.75rem; margin-bottom: 0.35rem;">[Chương trình bắt đầu thực thi...]</div>
+                                <div class="terminal-output" style="color: #4ade80; font-size: 0.85rem; font-family: var(--font-mono); white-space: pre-wrap;"></div>
+                                <div style="color: #94a3b8; font-size: 0.75rem; margin-top: 0.35rem;">[Thời gian chạy: 0.003s • Exit code 0]</div>
+                            </div>
+                            <div style="padding: 1rem 1.25rem; background: var(--bg-card); font-size: 0.875rem; border-top: 1px solid var(--border-color);">
+                                <div style="margin-bottom: 0.5rem;"><strong class="text-primary"><i class="fas fa-arrow-right-to-bracket"></i> Dữ liệu vào (Input):</strong> <code>${ex.input || 'Không có'}</code></div>
+                                <div style="margin-bottom: 0.5rem;"><strong class="text-success"><i class="fas fa-arrow-right-from-bracket"></i> Kết quả ra (Output):</strong> <pre style="background: var(--bg-primary); padding: 0.5rem; border-radius: 4px; margin-top: 4px; font-family: var(--font-mono);">${Utils.escapeHtml(ex.output)}</pre></div>
+                                <div style="color: var(--text-secondary); margin-top: 0.5rem;"><strong class="text-secondary"><i class="fas fa-lightbulb"></i> Giải thích chi tiết:</strong> ${ex.explanation}</div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+
+                <!-- REAL-WORLD APPLICATION -->
+                <div class="card p-4 mb-4" style="border-left: 4px solid var(--secondary); background: rgba(6, 182, 212, 0.05);">
+                    <h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--secondary); display: flex; align-items: center; gap: 0.5rem;">
+                        <i class="fas fa-earth-americas"></i> Ứng dụng thực tế trong công nghệ &amp; phần mềm
+                    </h3>
+                    <p class="text-secondary" style="font-size: 0.925rem; line-height: 1.7;">
+                        ${l.real_world_application || 'Đang cập nhật'}
+                    </p>
+                </div>
+
+                <!-- COMMON PITFALLS (NHỮNG LỖI THƯỜNG GẶP) -->
+                <div class="card p-4 mb-5" style="border-left: 4px solid var(--danger); background: rgba(239, 68, 68, 0.04);">
+                    <h3 style="font-size: 1.2rem; font-weight: 700; margin-bottom: 1rem; color: var(--danger); display: flex; align-items: center; gap: 0.5rem;">
+                        <i class="fas fa-triangle-exclamation"></i> Những lỗi thường gặp &amp; Cách khắc phục chuẩn
+                    </h3>
+                    <div style="display: flex; flex-direction: column; gap: 1rem;">
+                        ${(l.common_pitfalls || []).map((p, idx) => `
+                            <div style="padding: 1rem; border-radius: var(--radius-md); background: var(--bg-primary); border: 1px solid var(--border-color);">
+                                <div style="color: var(--danger); font-weight: 700; margin-bottom: 0.35rem;">
+                                    <i class="fas fa-xmark"></i> Lỗi ${idx + 1}: ${p.mistake}
+                                </div>
+                                <div class="text-secondary" style="font-size: 0.875rem; margin-bottom: 0.4rem;">
+                                    <strong>Nguyên nhân:</strong> ${p.reason}
+                                </div>
+                                <div style="color: var(--success); font-size: 0.875rem; font-weight: 600;">
+                                    <i class="fas fa-check"></i> <strong>Cách sửa đúng:</strong> ${p.fix}
                                 </div>
                             </div>
                         `).join('')}
                     </div>
+                </div>
 
-                    <!-- REAL-WORLD APPLICATION -->
-                    <div class="card p-4 mb-4" style="border-left: 4px solid var(--secondary); background: rgba(6, 182, 212, 0.05);">
-                        <h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--secondary); display: flex; align-items: center; gap: 0.5rem;">
-                            <i class="fas fa-earth-americas"></i> Ứng dụng thực tế trong công nghệ &amp; phần mềm
-                        </h3>
-                        <p class="text-secondary" style="font-size: 0.925rem; line-height: 1.7;">
-                            ${l.real_world_application || 'Đang cập nhật'}
-                        </p>
+                <!-- BOTTOM ACTIONS BAR -->
+                <div class="card p-4" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; background: var(--bg-tertiary);">
+                    <div>
+                        <button class="btn btn-primary btn-lg" onclick="AppRouter.navigate('#quiz?lesson_id=${l.id}')">
+                            <i class="fas fa-pen-to-square"></i> Làm bài kiểm tra trắc nghiệm (${l.id}/15)
+                        </button>
                     </div>
-
-                    <!-- COMMON PITFALLS (NHỮNG LỖI THƯỜNG GẶP) -->
-                    <div class="card p-4 mb-5" style="border-left: 4px solid var(--danger); background: rgba(239, 68, 68, 0.04);">
-                        <h3 style="font-size: 1.2rem; font-weight: 700; margin-bottom: 1rem; color: var(--danger); display: flex; align-items: center; gap: 0.5rem;">
-                            <i class="fas fa-triangle-exclamation"></i> Những lỗi thường gặp &amp; Cách khắc phục chuẩn
-                        </h3>
-                        <div style="display: flex; flex-direction: column; gap: 1rem;">
-                            ${(l.common_pitfalls || []).map((p, idx) => `
-                                <div style="padding: 1rem; border-radius: var(--radius-md); background: var(--bg-primary); border: 1px solid var(--border-color);">
-                                    <div style="color: var(--danger); font-weight: 700; margin-bottom: 0.35rem;">
-                                        <i class="fas fa-xmark"></i> Lỗi ${idx + 1}: ${p.mistake}
-                                    </div>
-                                    <div class="text-secondary" style="font-size: 0.875rem; margin-bottom: 0.4rem;">
-                                        <strong>Nguyên nhân:</strong> ${p.reason}
-                                    </div>
-                                    <div style="color: var(--success); font-size: 0.875rem; font-weight: 600;">
-                                        <i class="fas fa-check"></i> <strong>Cách sửa đúng:</strong> ${p.fix}
-                                    </div>
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
-
-                    <!-- BOTTOM ACTIONS BAR -->
-                    <div class="card p-4" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; background: var(--bg-tertiary);">
-                        <div>
-                            <button class="btn btn-primary btn-lg" onclick="AppRouter.navigate('#quiz?lesson_id=${l.id}')">
-                                <i class="fas fa-pen-to-square"></i> Làm bài kiểm tra trắc nghiệm (${l.id}/15)
-                            </button>
-                        </div>
-                        <div style="display: flex; gap: 0.75rem;">
-                            <button class="btn ${l.is_completed ? 'btn-secondary' : 'btn-success'}" id="mark-complete-btn" onclick="LessonView.handleMarkComplete(${l.id}, ${l.can_mark_complete}, ${l.is_completed})">
-                                <i class="fas ${l.is_completed ? 'fa-rotate-left' : 'fa-check'}"></i>
-                                ${l.is_completed ? 'Hủy đánh dấu hoàn thành' : 'Đánh dấu hoàn thành bài học'}
-                            </button>
-                        </div>
+                    <div style="display: flex; gap: 0.75rem;">
+                        <button class="btn ${l.is_completed ? 'btn-secondary' : 'btn-success'}" id="mark-complete-btn" onclick="LessonView.handleMarkComplete(${l.id}, ${l.can_mark_complete}, ${l.is_completed})">
+                            <i class="fas ${l.is_completed ? 'fa-rotate-left' : 'fa-check'}"></i>
+                            ${l.is_completed ? 'Hủy đánh dấu hoàn thành' : 'Đánh dấu hoàn thành bài học'}
+                        </button>
                     </div>
                 </div>
             </div>
         `;
+
+        // Bind scroll event for reading progress
+        window.onscroll = () => {
+            const bar = document.getElementById('reading-progress-bar');
+            if (!bar) return;
+            const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+            const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrolled = height > 0 ? (winScroll / height) * 100 : 0;
+            bar.style.width = scrolled + '%';
+        };
     },
 
-    // Convert Markdown text to formatted HTML
+    // Interactive Code Simulation in Lessons
+    runCodeExample(idx, outputText, btn) {
+        const term = document.getElementById(`example-terminal-${idx}`);
+        if (!term) return;
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang chạy...';
+        btn.disabled = true;
+
+        setTimeout(() => {
+            term.style.display = 'block';
+            const outDiv = term.querySelector('.terminal-output');
+            if (outDiv) {
+                outDiv.textContent = outputText;
+            }
+            btn.innerHTML = '<i class="fas fa-check text-success"></i> Đã hoàn thành';
+            btn.disabled = false;
+            setTimeout(() => {
+                btn.innerHTML = originalText;
+            }, 3000);
+        }, 400);
+    },
+
+    // Convert Markdown text to formatted HTML with C++ Syntax Highlighting
     renderMarkdownContent(md) {
         if (!md) return '';
         let html = md;
@@ -301,17 +366,18 @@ const LessonView = {
         // Blockquotes
         html = html.replace(/^\> (.*$)/gim, '<blockquote style="border-left: 4px solid var(--warning); padding: 0.75rem 1rem; margin: 1rem 0; background: var(--warning-light); border-radius: 0 var(--radius-md) var(--radius-md) 0; font-size: 0.9rem;">$1</blockquote>');
 
-        // Code blocks
+        // Code blocks with syntax highlighting
         html = html.replace(/```cpp([\s\S]*?)```/gim, function(match, code) {
+            const trimmed = code.trim();
             return `
                 <div class="code-box">
                     <div class="code-header">
-                        <span style="font-weight: 600;"><i class="fas fa-file-code"></i> C++ Example</span>
-                        <button class="copy-btn" onclick="Utils.copyCode(\`${Utils.escapeHtml(code.trim())}\`, this)">
-                            <i class="fas fa-copy"></i> Copy
+                        <span style="font-weight: 600; font-family: var(--font-mono);"><i class="fas fa-file-code text-primary"></i> C++ Example</span>
+                        <button class="copy-btn" onclick="Utils.copyCode(\`${Utils.escapeHtml(trimmed)}\`, this)">
+                            <i class="fas fa-copy"></i> Sao chép
                         </button>
                     </div>
-                    <pre class="code-content"><code>${Utils.escapeHtml(code.trim())}</code></pre>
+                    <pre class="code-content" style="margin: 0;"><code>${Utils.highlightCpp(trimmed)}</code></pre>
                 </div>
             `;
         });
@@ -319,7 +385,7 @@ const LessonView = {
         // Inline code
         html = html.replace(/`([^`]+)`/g, '<code style="background: var(--bg-tertiary); padding: 0.15rem 0.4rem; border-radius: 4px; font-family: var(--font-mono); font-size: 0.85em; color: #38bdf8;">$1</code>');
 
-        // Bold
+        // Bold & Italic
         html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
         html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
 
@@ -333,7 +399,6 @@ const LessonView = {
             return '<tr style="border-bottom: 1px solid var(--border-color);">' + cells.map(c => `<td style="padding: 0.6rem 0.85rem;">${c.trim()}</td>`).join('') + '</tr>';
         });
 
-        // Wrap rows in table if needed
         if (html.includes('<tr>')) {
             html = html.replace(/(<tr[\s\S]*?<\/tr>)+/gim, '<div style="overflow-x: auto; margin: 1.25rem 0;"><table style="width: 100%; border-collapse: collapse; font-size: 0.875rem;">$0</table></div>');
         }
